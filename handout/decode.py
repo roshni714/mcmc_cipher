@@ -101,7 +101,7 @@ def decode(ciphertext, has_breakpoint):
         f = metropolis_hastings(M, P, start, transitions)
         inverse_f = get_inverse(f)
 	decoded = "".join([inverse_f[i] for i in ciphertext])
-        print(decoded)	
+        return decoded
 
 def verify_proposal():
     perm = np.random.permutation(28)
