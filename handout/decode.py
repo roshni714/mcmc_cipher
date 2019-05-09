@@ -17,13 +17,13 @@ def get_transitions(ciphertext):
 		first = ciphertext[i]
 		second = ciphertext[i+1]
 		transition[LETTER_TO_INDEX[second]][LETTER_TO_INDEX[first]]+=1
-	return ciphertext[0], transition
+	return LETTER_TO_INDEX[ciphertext[0]], transition
 
 def get_inverse(f):
-	dic = {}
-	for i in f:
-		dic[f[i]] = i
-	return dic
+    new_f = np.zeros(28, dtype=int)
+    for i in range(len(f)):
+        new_f[f[i]] = i
+    return new_f
 
 def breakpoint_get_next_state(M, P, f1, f1_prime, f2, f2_prime, ciphertext, breakpoint):
 		state1, transition1 = get_transitions(ciphertext[:breakpoint])
@@ -49,11 +49,7 @@ def get_next_state(M, P, f, f_prime, start, transitions):
 		return f, 1
 def metropolis_hastings(M, P, start, transitions):
 	#initial state
-	permutation = np.random.permutation(28)
-	f = {}
-	for i in range(len(ALPHABET)):
-		f[ALPHABET[i]] = ALPHABET[permutation[i]]
-
+	f = np.random.permutation(28)
 	f_prime = get_proposal_distribution(f)
 	count = 0
 	for j in range(NUM_ITERATIONS):
@@ -108,13 +104,8 @@ def get_new_breakpoint(M, P, f1, f2, previous_breakpoint, ciphertext):
 
 def breakpoint_metropolis_hastings(M, P, ciphertext):
 	#initial state
-	permutation1 = np.random.permutation(28)
-	permutation2 = np.random.permutation(28)
-	f1 = {}
-	f2 = {}
-	for i in range(len(ALPHABET)):
-		f1[ALPHABET[i]] = ALPHABET[permutation1[i]]
-		f2[ALPHABET[i]] = ALPHABET[permutation2[i]]
+	f1 = np.random.permutation(28)
+        f2 = np.random.permutation(28)
 	f1_prime = get_proposal_distribution(f1)
 	f2_prime = get_proposal_distribution(f2)
 	breakpoint = int(len(ciphertext)/2)
@@ -175,11 +166,8 @@ def breakpoint_metropolis_hastings(M, P, ciphertext):
 	return f1, f2, breakpoint
 
 def get_proposal_distribution(f):
-	new_f = {}
-	for i in f:
-		new_f[i] = f[i]
-
-	keys_to_swap = random.sample(f.keys(), 2)
+	new_f = np.copy(f)
+	keys_to_swap = random.sample(np.arange(0, 28), 2)
 
 	first_map = f[keys_to_swap[0]]
 	second_map = f[keys_to_swap[1]]
@@ -189,27 +177,25 @@ def get_proposal_distribution(f):
 	return new_f
 
 def posterior(M, P, f_inverse, start, transitions):
-	probability = math.log(P[LETTER_TO_INDEX[f_inverse[start]]])
+        probability = math.log(P[f_inverse[start]])
 	for i in range(len(transitions)):
 				for j in range(len(transitions[0])):
 						if transitions[i][j] != 0:
-							probability += transitions[i][j] * math.log(M[LETTER_TO_INDEX[f_inverse[INDEX_TO_LETTER[i]]]][LETTER_TO_INDEX[f_inverse[INDEX_TO_LETTER[j]]]])
+							probability += transitions[i][j] * math.log(M[f_inverse[i]][f_inverse[j]])
 
 	return probability
 
 def decode(ciphertext, has_breakpoint):
-	M = np.loadtxt(open("data/letter_transition_matrix.csv", "rb"), delimiter=",")
-	P = np.loadtxt(open("data/letter_probabilities.csv", "rb"), delimiter=",")
+	M = np.loadtxt(open("data/letter_transition_matrix.csv", "rb"), delimiter=",", dtype=float)
+	P = np.loadtxt(open("data/letter_probabilities.csv", "rb"), delimiter=",", dtype=float)
 	start, transitions = get_transitions(ciphertext)
 
 	for i in range(len(M)):
 		for j in range(len(M)):
 			if M[i][j] == 0:
 				M[i][j] += math.exp(-20)
-			M[i][j] = float(M[i][j])
 		if P[i] == 0:
 			P[i] += math.exp(-20)
-			P[i] = float(P[i])
 	if has_breakpoint == False:
 		f = metropolis_hastings(M, P, start, transitions)
 		inverse_f = get_inverse(f)
@@ -219,34 +205,12 @@ def decode(ciphertext, has_breakpoint):
 		f1, f2, breakpoint  = breakpoint_metropolis_hastings(M, P, ciphertext)
 		inverse_f1 = get_inverse(f1)
 		inverse_f2 = get_inverse(f2)
-		decoded1 = "".join([inverse_f1[i] for i in ciphertext[:breakpoint]])
-		decoded2 = "".join([inverse_f2[i] for i in ciphertext[breakpoint:]])
+		decoded1 = "".join([ALPHABET[inverse_f1[LETTER_TO_INDEX[i]]] for i in ciphertext[:breakpoint]])
+		decoded2 = "".join([ALPHABET[inverse_f2[LETTER_TO_INDEX[i]]] for i in ciphertext[breakpoint:]])
 		decoded = decoded1 + decoded2
 	return decoded
 
-def verify_proposal():
-	perm = np.random.permutation(28)
-	dic = {}
-	for i in range(len(ALPHABET)):
-		dic[ALPHABET[i]] = INDEX_TO_LETTER[perm[i]]
 
-	f = get_proposal_distribution(dic)
-	count = 0
-	for i in f:
-		if f[i] != dic[i]:
-			count += 1
-	assert count ==2
-def verify_inv():
-	perm = np.random.permutation(28)
-	dic = {}
-	for i in range(len(ALPHABET)):
-		dic[ALPHABET[i]] = INDEX_TO_LETTER[perm[i]]
-
-	f = get_inverse(dic)
-	for i in f:
-		if dic[f[i]] != i:
-			assert False
-"""
 with open("test_ciphertext_breakpoint.txt") as f:
     ciphertext = f.read().rstrip()
     decoded = decode(ciphertext, True)
@@ -260,4 +224,4 @@ with open("test_plaintext.txt") as f2:
 
     print("accuracy: {}".format(count/len(plaintext)))
 
-"""
+
