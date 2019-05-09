@@ -145,9 +145,9 @@ def breakpoint_metropolis_hastings(M, P, ciphertext):
 			f2_prime = get_proposal_distribution(f2)
 		else:
 			breakpoint, out = get_new_breakpoint(M, P, f1, f2, breakpoint, ciphertext)
-		if count1 >= 1000:
+		if count1 >= 1500:
 			found_cipher1 = True
-		if count2 >= 1000:
+		if count2 >= 1500:
 			found_cipher2 = True
 		if break_count >= 5000:
 			found_breakpoint = True
@@ -246,7 +246,18 @@ def verify_inv():
 	for i in f:
 		if dic[f[i]] != i:
 			assert False
-
+"""
 with open("test_ciphertext_breakpoint.txt") as f:
-	ciphertext = f.read().rstrip()
-	decode(ciphertext, True)
+    ciphertext = f.read().rstrip()
+    decoded = decode(ciphertext, True)
+    print(decoded)
+with open("test_plaintext.txt") as f2:
+    plaintext = f2.read().rstrip()
+    count = 0.
+    for i in range(len(plaintext)):
+        if plaintext[i] == decoded[i]:
+            count +=1
+
+    print("accuracy: {}".format(count/len(plaintext)))
+
+"""
