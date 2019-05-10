@@ -12,18 +12,9 @@ INDEX_TO_LETTER = {0: 'a', 1: 'b', 2: 'c', 3: 'd', 4: 'e', 5: 'f', 6: 'g', 7: 'h
 ALPHABET = string.ascii_lowercase + " ."
 
 def get_transitions(ciphernums):
-	transition = np.zeros((28, 28))
-
         new_transition = np.zeros((28, 28))
-
         new_transition[ciphernums[1:], ciphernums[:-1]] += 1
-	for i in range(len(ciphernums)-1):
-		first = ciphernums[i]
-		second = ciphernums[i+1]
-		transition[second][first]+=1
-
-        assert(new_transition.all() == transition.all())
-	return ciphernums[0], transition
+	return ciphernums[0], new_transition
 
 def get_inverse(f):
     new_f = np.zeros(28, dtype=int)
@@ -93,7 +84,7 @@ def get_new_breakpoint(M, P, f1, f2, previous_breakpoint, ciphernums):
 	f1_inverse = get_inverse(f1)
 	f2_inverse = get_inverse(f2)
 	  
-	f_breakpoint = random.randint(1, len(ciphernums)-1)
+	f_breakpoint = int(np.random.randn(1) *20 + previous_breakpoint) % len(ciphernums)
 
         forward  =  direct_posterior(M, P, f1_inverse, ciphernums[:f_breakpoint]) + direct_posterior(M, P, f2_inverse, ciphernums[f_breakpoint:])
         original = (direct_posterior(M, P, f1_inverse, ciphernums[:previous_breakpoint]) + direct_posterior(M, P, f2_inverse, ciphernums[previous_breakpoint:]))
@@ -147,11 +138,8 @@ def breakpoint_metropolis_hastings(M, P, ciphernums):
 	return f1, f2, breakpoint, ll_best_so_far
 
 def get_proposal_distribution(f):
-	new_f = np.zeros(28, dtype=int)
-
-        new_f = [f[i] for i in range(len(f))]
-
-	keys_to_swap = random.sample(f, 2)
+        new_f = np.copy(f)
+	keys_to_swap = np.random.choice(f, 2, replace=False)
 
 	first_map = f[keys_to_swap[0]]
 	second_map = f[keys_to_swap[1]]
@@ -159,16 +147,7 @@ def get_proposal_distribution(f):
 	new_f[keys_to_swap[0]] = second_map
 	new_f[keys_to_swap[1]] = first_map
 
-        verify_proposal(f, new_f)
 	return new_f
-
-def verify_proposal(f, new_f):
-    count = 0
-    for i in range(len(f)):
-        if f[i] != new_f[i]:
-            count +=1
-    assert(count==2)
-
 
 def posterior(M, P, f_inverse, start, transitions):
 	probability = P[f_inverse[start]]
@@ -181,8 +160,8 @@ def ciphertext_to_nums(ciphertext):
     ciphernum = np.array([LETTER_TO_INDEX[i] for i in ciphertext])
     return ciphernum
 
-BREAKPOINT_ATTEMPTS = 5
-NO_BREAKPOINT_ATTEMPTS = 10
+BREAKPOINT_ATTEMPTS = 10 
+NO_BREAKPOINT_ATTEMPTS = 20 
 def decode(ciphertext, has_breakpoint):
 	M = np.loadtxt(open("data/letter_transition_matrix.csv", "rb"), delimiter=",", dtype=float)
 	P = np.loadtxt(open("data/letter_probabilities.csv", "rb"), delimiter=",", dtype=float)
