@@ -154,12 +154,13 @@ def get_proposal_distribution(f):
 
 	return new_f
 
+
 def posterior(M, P, f_inverse, start, transitions):
-	probability = P[f_inverse[start]]
-        i = np.arange(0, SIZE).repeat(SIZE)
-        j = np.arange(0, SIZE).reshape(1, SIZE).repeat(SIZE, axis=0).flatten()
-        p1 = np.sum(transitions[i, j] * M[f_inverse[i], f_inverse[j]])
-	return probability+p1
+    probability = P[f_inverse[start]]
+    X = np.arange(0, SIZE).repeat(SIZE)
+    Y= np.arange(0, SIZE).reshape(1, SIZE).repeat(SIZE, axis=0).flatten()
+    p1 = np.sum(transitions[X, Y] * M[f_inverse[X], f_inverse[Y]])
+    return probability+p1
 
 def ciphertext_to_nums(ciphertext):
     ciphernum = np.array([LETTER_TO_INDEX[i] for i in ciphertext])
