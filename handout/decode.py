@@ -1,23 +1,25 @@
 import numpy as np
-import string
 import random
 import math
 
-NUM_ITERATIONS= 30000
+NUM_ITERATIONS= 10000
 
-LETTER_TO_INDEX = {'y': 24, 'e': 4, 'l': 11, 'f': 5, ' ': 26, 'c': 2, 's': 18, 'h': 7, 'r': 17, 'x': 23, 'n': 13, 'p': 15, 'z': 25, 'q': 16, 'b': 1, 'g': 6, 'o': 14, 't': 19, 'v': 21, 'u': 20, 'j': 9, 'd': 3, 'a': 0, 'i': 8, 'w': 22, 'm': 12, '.': 27, 'k': 10}
+def get_alphabet():
+    with open('data/alphabet.csv') as f:
+        a = f.read().rstrip().split(",")
+    return a
 
-INDEX_TO_LETTER = {0: 'a', 1: 'b', 2: 'c', 3: 'd', 4: 'e', 5: 'f', 6: 'g', 7: 'h', 8: 'i', 9: 'j', 10: 'k', 11: 'l', 12: 'm', 13: 'n', 14: 'o', 15: 'p', 16: 'q', 17: 'r', 18: 's', 19: 't', 20: 'u', 21: 'v', 22: 'w', 23: 'x', 24: 'y', 25: 'z', 26: ' ', 27: '.'}
-
-ALPHABET = string.ascii_lowercase + " ."
+ALPHABET = get_alphabet()
+SIZE = len(ALPHABET)
+LETTER_TO_INDEX = {ALPHABET[i]:i for i in range(len(ALPHABET))}
 
 def get_transitions(ciphernums):
-        new_transition = np.zeros((28, 28))
+        new_transition = np.zeros((SIZE, SIZE))
         new_transition[ciphernums[1:], ciphernums[:-1]] += 1
 	return ciphernums[0], new_transition
 
 def get_inverse(f):
-    new_f = np.zeros(28, dtype=int)
+    new_f = np.zeros(SIZE, dtype=int)
     for i in range(len(f)):
         new_f[f[i]] = i
     return new_f
@@ -33,9 +35,10 @@ def direct_posterior(M, P, f_inverse, ciphernums):
     return probability
 
 def breakpoint_direct_posterior_next_state(M, P, f, f_prime, ciphernums):
-	f_inverse = get_inverse(f)
+        f_inverse = get_inverse(f)
 	f_prime_inverse = get_inverse(f_prime)
-	new_ll= direct_posterior(M, P, f_prime_inverse, ciphernums)
+        
+        new_ll= direct_posterior(M, P, f_prime_inverse, ciphernums)
         old_ll= direct_posterior(M, P, f_inverse, ciphernums)
 	acceptance_factor = min(0, new_ll-old_ll)
 	v = random.random()
@@ -63,7 +66,7 @@ def get_next_state(M, P, f, f_prime, start, transitions):
 		return f, 1, old_ll
 def metropolis_hastings(M, P, start, transitions):
 	#initial state
-	f= np.random.permutation(28)
+	f= np.random.permutation(SIZE)
 
 	f_prime = get_proposal_distribution(f)
 	count = 0
@@ -86,6 +89,8 @@ def get_new_breakpoint(M, P, f1, f2, previous_breakpoint, ciphernums):
 	  
 	f_breakpoint = int(np.random.randn(1) *20 + previous_breakpoint) % len(ciphernums)
 
+        while f_breakpoint == 0 or f_breakpoint == len(ciphernums)-1:
+            f_breakpoint = int(np.random.randn(1) *20 + previous_breakpoint) % len(ciphernums)
         forward  =  direct_posterior(M, P, f1_inverse, ciphernums[:f_breakpoint]) + direct_posterior(M, P, f2_inverse, ciphernums[f_breakpoint:])
         original = (direct_posterior(M, P, f1_inverse, ciphernums[:previous_breakpoint]) + direct_posterior(M, P, f2_inverse, ciphernums[previous_breakpoint:]))
 	balance = forward - original
@@ -103,8 +108,8 @@ def get_new_breakpoint(M, P, f1, f2, previous_breakpoint, ciphernums):
 
 def breakpoint_metropolis_hastings(M, P, ciphernums):
 	#initial state
-	f1 = np.random.permutation(28)
-	f2 = np.random.permutation(28)
+	f1 = np.random.permutation(SIZE)
+	f2 = np.random.permutation(SIZE)
 	f1_prime = get_proposal_distribution(f1)
 	f2_prime = get_proposal_distribution(f2)
 	breakpoint = int(len(ciphernums)/2)
@@ -114,7 +119,7 @@ def breakpoint_metropolis_hastings(M, P, ciphernums):
 
         best_f1 = f1
         best_f2 = f2
-        best_breakpoint = breakpoint
+        best_b = breakpoint
         ll_best_so_far = -float("inf")  
 	for j in range(NUM_ITERATIONS):
 		#get a proposal
@@ -135,7 +140,7 @@ def breakpoint_metropolis_hastings(M, P, ciphernums):
                             best_iter = j
                 else:
                     break
-	return f1, f2, breakpoint, ll_best_so_far
+	return best_f1, best_f2, best_b, ll_best_so_far
 
 def get_proposal_distribution(f):
         new_f = np.copy(f)
@@ -151,8 +156,8 @@ def get_proposal_distribution(f):
 
 def posterior(M, P, f_inverse, start, transitions):
 	probability = P[f_inverse[start]]
-        i = np.arange(0, 28).repeat(28)
-        j = np.arange(0, 28).reshape(1, 28).repeat(28, axis=0).flatten()
+        i = np.arange(0, SIZE).repeat(SIZE)
+        j = np.arange(0, SIZE).reshape(1, SIZE).repeat(SIZE, axis=0).flatten()
         p1 = np.sum(transitions[i, j] * M[f_inverse[i], f_inverse[j]])
 	return probability+p1
 
@@ -161,7 +166,7 @@ def ciphertext_to_nums(ciphertext):
     return ciphernum
 
 BREAKPOINT_ATTEMPTS = 10 
-NO_BREAKPOINT_ATTEMPTS = 20 
+NO_BREAKPOINT_ATTEMPTS = 5 
 def decode(ciphertext, has_breakpoint):
 	M = np.loadtxt(open("data/letter_transition_matrix.csv", "rb"), delimiter=",", dtype=float)
 	P = np.loadtxt(open("data/letter_probabilities.csv", "rb"), delimiter=",", dtype=float)
@@ -176,8 +181,7 @@ def decode(ciphertext, has_breakpoint):
                 P[i] = math.log(P[i])
 	if has_breakpoint == False:
                 ciphernums = ciphertext_to_nums(ciphertext)
-	        f_best = np.random.permutation(28)
-                break_best = len(ciphernums)/2
+	        f_best = np.random.permutation(SIZE)
                 ll_best_so_far = -float("inf")
                 for i in range(NO_BREAKPOINT_ATTEMPTS):
                     start, transitions = get_transitions(ciphernums)
@@ -192,8 +196,8 @@ def decode(ciphertext, has_breakpoint):
 
 	else:
                 ciphernums = ciphertext_to_nums(ciphertext)
-	        f1_best = np.random.permutation(28)
-                f2_best = np.random.permutation(28)
+	        f1_best = np.random.permutation(SIZE)
+                f2_best = np.random.permutation(SIZE)
                 break_best = len(ciphernums)/2
                 ll_best_so_far = -float("inf")
                 for i in range(BREAKPOINT_ATTEMPTS):
@@ -210,18 +214,4 @@ def decode(ciphertext, has_breakpoint):
 		decoded2 = "".join([ALPHABET[i] for i in inverse_f2[ciphernums[break_best:]]])
 		decoded = decoded1 + decoded2
 	return decoded
-"""
-with open("test_ciphertext_breakpoint.txt") as f:
-    ciphertext = f.read().rstrip()
-    decoded = decode(ciphertext, True)
-    print(decoded)
-with open("test_plaintext.txt") as f2:
-    plaintext = f2.read().rstrip()
-    count = 0.
-    for i in range(len(plaintext)):
-        if plaintext[i] == decoded[i]:
-            count +=1
 
-    print("accuracy: {}".format(count/len(plaintext)))
-
-"""
