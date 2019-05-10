@@ -166,11 +166,14 @@ def verify_proposal(f, new_f):
 
 def posterior(M, P, f_inverse, start, transitions):
 	probability = P[f_inverse[start]]
+
+        p1 = np.sum(M[f_inverse[np.arange(0, 28).repeat(28, axis=0),np.arange(0, 28).repeat(28, axis=1)]] * transitions[np.arange(0, 28).repeat(28, axis=0), np.arange(0, 28).repeat(28, axis=1)])
+        p2 = 0
 	for i in range(len(transitions)):
 				for j in range(len(transitions[0])):
 						if transitions[i][j] != 0:
-							probability += transitions[i][j] * M[f_inverse[i]][f_inverse[j]]
-
+							p2 += transitions[i][j] * M[f_inverse[i]][f_inverse[j]]
+        assert p1==p2
 	return probability
 
 def ciphertext_to_nums(ciphertext):
