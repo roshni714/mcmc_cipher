@@ -215,4 +215,3 @@ def decode(ciphertext, has_breakpoint):
 		decoded2 = "".join([ALPHABET[i] for i in inverse_f2[ciphernums[break_best:]]])
 		decoded = decoded1 + decoded2
 	return decoded
-
